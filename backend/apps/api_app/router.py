@@ -2,9 +2,9 @@ import json
 from uuid import UUID
 
 from django.http import StreamingHttpResponse
+from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import ensure_csrf_cookie
 from ninja import NinjaAPI
 from ninja.errors import HttpError
 
@@ -88,6 +88,7 @@ def serialize_card(card: LearningCard) -> LearningCardOut:
         level=card.level,
         markdown=card.markdown,
         summary=card.summary,
+        next_topic=card.next_topic,
         order_index=card.order_index,
         created_at=card.created_at,
     )
@@ -99,8 +100,10 @@ def health(request):
 
 
 @api.get("/csrf")
-@ensure_csrf_cookie
 def csrf(request):
+    # Ninja 会把 dict 转成自己的响应对象，不能直接套 ensure_csrf_cookie。
+    # 显式调用 get_token 会标记 CSRF cookie 需要写入，最终由 Django middleware 设置。
+    get_token(request)
     return {"csrf": "ok"}
 
 
@@ -275,7 +278,7 @@ def learn_stream(request, conversation_id: UUID, payload: LearnStreamIn):
             card = save_learning_card(conversation, user_message, "".join(raw_chunks))
             # 模型按约束返回 JSON，但用户界面应该展示 JSON 里的 markdown 字段。
             # 流式阶段先显示原始增量，保存成功后用 card_replace 把草稿替换为干净 Markdown。
-            yield sse_event("card_replace", {"markdown": card.markdown})
+            yield sse_event("card_replace", {"markdown": card.markdown, "next_topic": card.next_topic})
             yield sse_event("card_done", {"card_id": str(card.id), "message_id": str(card.message_id)})
         except Exception as exc:
             yield sse_event("error", {"code": "generation_failed", "message": str(exc)[:500]})

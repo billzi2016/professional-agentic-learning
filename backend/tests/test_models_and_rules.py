@@ -71,7 +71,8 @@ def test_learning_card_json_payload_saves_markdown_only():
           "topic": "SQL",
           "level": "beginner",
           "markdown": "## 什么是 SQL\\nSQL 用于查询和管理关系型数据库。",
-          "summary": "介绍 SQL 的基本用途。"
+          "summary": "介绍 SQL 的基本用途。",
+          "next_topic": "SELECT 查询"
         }
         """,
     )
@@ -79,3 +80,6 @@ def test_learning_card_json_payload_saves_markdown_only():
     assert card.markdown.startswith("## 什么是 SQL")
     assert card.message.content == card.markdown
     assert '"markdown"' not in card.message.content
+    assert conversation.title == "SQL 基础"
+    assert card.next_topic == "SELECT 查询"
+    assert card.message.metadata["next_topic"] == "SELECT 查询"

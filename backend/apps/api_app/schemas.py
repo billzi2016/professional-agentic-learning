@@ -105,6 +105,7 @@ class LearningCardOut(Schema):
     level: str
     markdown: str
     summary: str
+    next_topic: str
     order_index: int
     created_at: datetime
 

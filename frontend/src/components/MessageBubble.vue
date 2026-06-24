@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { Pencil, RotateCcw } from '@lucide/vue'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { Message } from '../types'
 import MarkdownRenderer from './MarkdownRenderer.vue'
 
-const props = defineProps<{ message: Message }>()
+const props = defineProps<{ message: Message; canEdit: boolean }>()
 const emit = defineEmits<{
   edit: [id: string, value: string]
   regenerate: [cardId: string]
+  nextTopic: [topic: string]
 }>()
 
 const editing = ref(false)
 const draft = ref(props.message.content)
+const nextTopic = computed(() => {
+  const value = props.message.metadata?.next_topic
+  return typeof value === 'string' ? value : ''
+})
 
 function saveEdit() {
   const value = draft.value.trim()
@@ -35,8 +40,17 @@ function saveEdit() {
     </template>
     <MarkdownRenderer v-else :source="message.content || '正在生成...'" />
 
+    <button
+      v-if="nextTopic"
+      class="next-topic"
+      type="button"
+      @click="$emit('nextTopic', nextTopic)"
+    >
+      下一个知识点：{{ nextTopic }}
+    </button>
+
     <div class="message-actions">
-      <button v-if="message.is_editable" type="button" @click="editing = true">
+      <button v-if="canEdit" type="button" @click="editing = true">
         <Pencil :size="14" />
         修改输入
       </button>

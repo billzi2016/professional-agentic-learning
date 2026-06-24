@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Download } from '@lucide/vue'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { initializeCsrf } from '../api/client'
@@ -32,6 +32,15 @@ const latestCard = computed(() =>
   [...messages.items].reverse().find((item) => item.role === 'assistant' && item.learning_card_id),
 )
 
+function canEditMessageAt(index: number) {
+  const item = messages.items[index]
+  if (!item?.is_editable) return false
+
+  // 用户刚发出消息时还没有形成一轮对话，此时不展示“修改输入”。
+  // 只有后面已经出现 AI 回复，才说明这是可回退的最近一轮输入。
+  return messages.items.slice(index + 1).some((next) => next.role === 'assistant')
+}
+
 async function selectConversation(id: string) {
   conversations.select(id)
   await router.replace(`/chat/${id}`)
@@ -47,6 +56,7 @@ async function send(value: string) {
   }
   await messages.send(conversationId, value)
   await conversations.load()
+  conversations.select(conversationId)
 }
 
 function startSidebarResize(event: PointerEvent) {
@@ -102,11 +112,16 @@ watch(
 onMounted(async () => {
   await initializeCsrf()
   await Promise.all([conversations.load(), provider.load()])
+  provider.startHeartbeat()
   const routeId = String(route.params.conversationId ?? '')
   const target = routeId || conversations.currentId
   if (target) {
     await selectConversation(target)
   }
+})
+
+onUnmounted(() => {
+  provider.stopHeartbeat()
 })
 </script>
 
@@ -140,11 +155,13 @@ onMounted(async () => {
           </div>
 
           <MessageBubble
-            v-for="item in messages.items"
+            v-for="(item, index) in messages.items"
             :key="item.id"
             :message="item"
+            :can-edit="canEditMessageAt(index)"
             @edit="messages.editLatest"
             @regenerate="(cardId) => conversations.currentId && messages.regenerateLatest(conversations.currentId, cardId)"
+            @next-topic="(topic) => conversations.currentId && messages.continueWithTopic(conversations.currentId, topic)"
           />
 
           <QuizCard

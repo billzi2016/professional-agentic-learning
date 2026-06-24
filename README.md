@@ -53,6 +53,20 @@ pnpm dev --host 127.0.0.1
 ./run-all.sh
 ```
 
+`run-all.sh` 只启动两个独立 tmux session，不会自动进入任何一个。
+
+进入 Vue/Vite：
+
+```sh
+tmux attach -t agentic-learning-vue
+```
+
+进入 Django：
+
+```sh
+tmux attach -t agentic-learning-django
+```
+
 停止本项目的两个 tmux session：
 
 ```sh

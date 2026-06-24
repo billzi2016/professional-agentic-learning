@@ -80,6 +80,10 @@ def build_budgeted_context(
 def _context_payload(action: str, items: list[ContextItem]) -> dict:
     return {
         "action": action,
+        "action_policy": (
+            "start 表示第一张卡片，必须先介绍主题、用途、学习路线和起点；"
+            "continue 表示沿着 next_topic 继续学习一个最小知识点。"
+        ),
         "recent_messages": [
             item.payload for item in items if item.kind == "message"
         ],

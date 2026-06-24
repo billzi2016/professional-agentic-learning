@@ -47,6 +47,9 @@ class OpenAICompatibleProvider:
             messages=messages,
             stream=True,
             temperature=0.4,
+            # 学习卡片必须“一次学一点”。这里给模型输出加上硬上限，
+            # 避免它把完整课程一次性展开。
+            max_tokens=900,
         )
         for chunk in stream:
             delta = chunk.choices[0].delta.content

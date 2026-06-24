@@ -40,5 +40,3 @@ echo "  $VUE_SESSION -> Vue frontend"
 echo
 echo "Attach Django: tmux attach -t $DJANGO_SESSION"
 echo "Attach Vue:    tmux attach -t $VUE_SESSION"
-
-tmux attach -t "$VUE_SESSION"

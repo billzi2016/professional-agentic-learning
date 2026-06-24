@@ -14,6 +14,15 @@ def test_health_api_is_available():
 
 
 @pytest.mark.django_db
+def test_csrf_api_sets_cookie():
+    client = Client(enforce_csrf_checks=True)
+    response = client.get("/api/csrf")
+
+    assert response.status_code == 200
+    assert "csrftoken" in response.cookies
+
+
+@pytest.mark.django_db
 def test_write_api_requires_csrf_token():
     conversation = Conversation.objects.create(title="SQL 学习")
     client = Client(enforce_csrf_checks=True)

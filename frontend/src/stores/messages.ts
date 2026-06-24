@@ -49,6 +49,11 @@ export const useMessageStore = defineStore('messages', {
         await this.startLearning(conversationId, latestUser.id, 'continue')
       }
     },
+    async continueWithTopic(conversationId: string, topic: string) {
+      const userMessage = await createMessage(conversationId, `继续学习：${topic}`)
+      this.items.push(userMessage)
+      await this.startLearning(conversationId, userMessage.id, 'continue')
+    },
     async regenerateLatest(conversationId: string, cardId: string) {
       const latestUser = [...this.items].reverse().find((item) => item.role === 'user')
       if (latestUser) {
@@ -104,7 +109,7 @@ export const useMessageStore = defineStore('messages', {
         id: `draft-${crypto.randomUUID()}`,
         role: 'assistant',
         message_type: 'learning_card',
-        content: '',
+        content: '正在生成学习卡片...',
         is_editable: false,
         can_regenerate_from_here: false,
         metadata: {},
@@ -119,10 +124,12 @@ export const useMessageStore = defineStore('messages', {
         await streamApi(path, body, this.abortController.signal, {
           onEvent: (event, data) => {
             if (event === 'card_delta') {
-              this.appendToDraft(draftId, String(data.delta ?? ''))
+              // 模型流式返回的是结构化 JSON。JSON 只是后端解析格式，
+              // 不应该暴露给学习者；生成完成后由 card_replace 替换为 markdown。
+              return
             }
             if (event === 'card_replace') {
-              this.replaceDraft(draftId, String(data.markdown ?? ''))
+              this.replaceDraft(draftId, String(data.markdown ?? ''), String(data.next_topic ?? ''))
             }
             if (event === 'card_done') {
               const messageId = String(data.message_id ?? draftId)
@@ -149,8 +156,12 @@ export const useMessageStore = defineStore('messages', {
     appendToDraft(draftId: string, delta: string) {
       this.items = this.items.map((item) => (item.id === draftId ? { ...item, content: item.content + delta } : item))
     },
-    replaceDraft(draftId: string, content: string) {
-      this.items = this.items.map((item) => (item.id === draftId ? { ...item, content } : item))
+    replaceDraft(draftId: string, content: string, nextTopic = '') {
+      this.items = this.items.map((item) =>
+        item.id === draftId
+          ? { ...item, content, metadata: { ...item.metadata, next_topic: nextTopic } }
+          : item,
+      )
     },
   },
 })

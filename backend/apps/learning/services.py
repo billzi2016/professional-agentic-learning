@@ -22,6 +22,7 @@ class LearningCardPayload(BaseModel):
     level: str = "beginner"
     markdown: str = Field(min_length=1)
     summary: str = Field(min_length=1)
+    next_topic: str = Field(default="", max_length=200)
 
     @field_validator("level")
     @classmethod
@@ -93,6 +94,7 @@ def parse_learning_card(raw_text: str, fallback_topic: str) -> LearningCardPaylo
             level="beginner",
             markdown=raw_text.strip() or "模型没有返回有效内容。",
             summary=(raw_text.strip()[:300] or "模型没有返回有效摘要。"),
+            next_topic="继续学习下一个最小概念",
         )
 
 
@@ -112,6 +114,7 @@ def save_learning_card(conversation: Conversation, user_message: Message, raw_te
         role=Message.Role.ASSISTANT,
         message_type=Message.MessageType.LEARNING_CARD,
         content=payload.markdown,
+        metadata={"next_topic": payload.next_topic},
     )
     card = LearningCard.objects.create(
         conversation=conversation,
@@ -121,9 +124,15 @@ def save_learning_card(conversation: Conversation, user_message: Message, raw_te
         level=payload.level,
         markdown=payload.markdown,
         summary=payload.summary,
+        next_topic=payload.next_topic,
         order_index=next_index,
     )
-    conversation.save(update_fields=["updated_at"])
+    if next_index == 1:
+        # 第一张卡片的标题来自模型结构化输出，比“新对话”或用户原始输入更适合作为侧边栏标题。
+        conversation.title = payload.title
+        conversation.save(update_fields=["title", "updated_at"])
+    else:
+        conversation.save(update_fields=["updated_at"])
     return card
 
 

@@ -32,6 +32,7 @@ class LearningCard(models.Model):
     level = models.CharField(max_length=20, choices=Level.choices, default=Level.BEGINNER)
     markdown = models.TextField()
     summary = models.TextField(blank=True)
+    next_topic = models.CharField(max_length=200, blank=True, default="")
     order_index = models.PositiveIntegerField(default=1)
     status = models.CharField(
         max_length=20,
