@@ -1,0 +1,23 @@
+[project]
+name = "professional-agentic-learning-backend"
+version = "0.1.0"
+description = "Django API backend for the AI learning card system."
+requires-python = ">=3.11"
+dependencies = [
+  "django>=5",
+  "django-ninja>=1.0",
+  "django-cors-headers>=4.0",
+  "openai>=1.0",
+  "ollama>=0.4",
+  "pydantic>=2.0",
+  "json-repair>=0.30",
+  "bleach>=6.0",
+  "pytest>=8.0",
+  "pytest-django>=4.0",
+  "factory-boy>=3.0",
+  "tiktoken>=0.7",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "backend.settings"
+python_files = ["test_*.py"]
