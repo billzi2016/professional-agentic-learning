@@ -2,6 +2,7 @@ import pytest
 
 from apps.conversations.models import Conversation, Message
 from apps.conversations.services import can_edit_message
+from apps.learning.services import save_learning_card
 from apps.learning.models import LearningCard
 
 
@@ -50,3 +51,31 @@ def test_learning_card_uses_orm_relations():
 
     assert conversation.learning_cards.get() == card
     assert message.learning_card == card
+
+
+@pytest.mark.django_db
+def test_learning_card_json_payload_saves_markdown_only():
+    conversation = Conversation.objects.create(title="SQL 学习")
+    user_message = Message.objects.create(
+        conversation=conversation,
+        role=Message.Role.USER,
+        content="开始学习 sql",
+    )
+
+    card = save_learning_card(
+        conversation,
+        user_message,
+        """
+        {
+          "title": "SQL 基础",
+          "topic": "SQL",
+          "level": "beginner",
+          "markdown": "## 什么是 SQL\\nSQL 用于查询和管理关系型数据库。",
+          "summary": "介绍 SQL 的基本用途。"
+        }
+        """,
+    )
+
+    assert card.markdown.startswith("## 什么是 SQL")
+    assert card.message.content == card.markdown
+    assert '"markdown"' not in card.message.content

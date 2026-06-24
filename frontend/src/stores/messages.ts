@@ -121,6 +121,9 @@ export const useMessageStore = defineStore('messages', {
             if (event === 'card_delta') {
               this.appendToDraft(draftId, String(data.delta ?? ''))
             }
+            if (event === 'card_replace') {
+              this.replaceDraft(draftId, String(data.markdown ?? ''))
+            }
             if (event === 'card_done') {
               const messageId = String(data.message_id ?? draftId)
               const cardId = String(data.card_id ?? '')
@@ -145,6 +148,9 @@ export const useMessageStore = defineStore('messages', {
     },
     appendToDraft(draftId: string, delta: string) {
       this.items = this.items.map((item) => (item.id === draftId ? { ...item, content: item.content + delta } : item))
+    },
+    replaceDraft(draftId: string, content: string) {
+      this.items = this.items.map((item) => (item.id === draftId ? { ...item, content } : item))
     },
   },
 })

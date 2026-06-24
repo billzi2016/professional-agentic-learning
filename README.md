@@ -53,6 +53,12 @@ pnpm dev --host 127.0.0.1
 ./run-all.sh
 ```
 
+停止本项目的两个 tmux session：
+
+```sh
+./stop-all.sh
+```
+
 ## 环境变量
 
 后端默认使用 Ollama OpenAI-compatible endpoint：

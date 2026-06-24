@@ -192,8 +192,18 @@ h1 {
   box-shadow: 0 10px 24px rgb(28 39 54 / 6%);
 }
 
+.message {
+  width: fit-content;
+  max-width: min(72%, 680px);
+}
+
+.message.assistant {
+  margin-right: auto;
+}
+
 .message.user {
   margin-left: auto;
+  max-width: min(58%, 560px);
   background: #f9fbff;
   border-color: #dbeafe;
 }

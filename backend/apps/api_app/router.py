@@ -273,6 +273,9 @@ def learn_stream(request, conversation_id: UUID, payload: LearnStreamIn):
                 raw_chunks.append(delta)
                 yield sse_event("card_delta", {"delta": delta})
             card = save_learning_card(conversation, user_message, "".join(raw_chunks))
+            # 模型按约束返回 JSON，但用户界面应该展示 JSON 里的 markdown 字段。
+            # 流式阶段先显示原始增量，保存成功后用 card_replace 把草稿替换为干净 Markdown。
+            yield sse_event("card_replace", {"markdown": card.markdown})
             yield sse_event("card_done", {"card_id": str(card.id), "message_id": str(card.message_id)})
         except Exception as exc:
             yield sse_event("error", {"code": "generation_failed", "message": str(exc)[:500]})
