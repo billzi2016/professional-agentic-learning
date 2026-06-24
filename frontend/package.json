@@ -1,0 +1,41 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@headlessui/vue": "^1.7.23",
+    "@lucide/vue": "^1.21.0",
+    "@microsoft/fetch-event-source": "^2.0.1",
+    "axios": "^1.18.1",
+    "canvas-confetti": "^1.9.4",
+    "dayjs": "^1.11.21",
+    "dompurify": "^3.4.11",
+    "highlight.js": "^11.11.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "markdown-it": "^14.2.0",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.38",
+    "vue-router": "^4.6.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^24.13.2",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/tsconfig": "^0.9.1",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.0",
+    "vue-tsc": "^3.3.5"
+  }
+}
