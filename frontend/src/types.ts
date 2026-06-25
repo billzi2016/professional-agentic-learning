@@ -3,8 +3,8 @@ export type HealthStatus = 'healthy' | 'unhealthy' | 'checking'
 export interface Conversation {
   id: string
   title: string
+  summary: string
   is_pinned: boolean
-  last_message_preview?: string
   created_at: string
   updated_at: string
 }

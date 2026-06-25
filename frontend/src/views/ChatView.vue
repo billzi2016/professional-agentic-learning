@@ -41,6 +41,15 @@ function canEditMessageAt(index: number) {
   return messages.items.slice(index + 1).some((next) => next.role === 'assistant')
 }
 
+function regenerateCardIdForUserAt(index: number) {
+  const item = messages.items[index]
+  if (item?.role !== 'user' || !canEditMessageAt(index)) return ''
+  const nextAssistant = messages.items
+    .slice(index + 1)
+    .find((next) => next.role === 'assistant' && next.learning_card_id)
+  return nextAssistant?.learning_card_id ?? ''
+}
+
 async function selectConversation(id: string) {
   conversations.select(id)
   await router.replace(`/chat/${id}`)
@@ -159,6 +168,8 @@ onUnmounted(() => {
             :key="item.id"
             :message="item"
             :can-edit="canEditMessageAt(index)"
+            :can-regenerate="Boolean(regenerateCardIdForUserAt(index))"
+            :regenerate-card-id="regenerateCardIdForUserAt(index)"
             @edit="messages.editLatest"
             @regenerate="(cardId) => conversations.currentId && messages.regenerateLatest(conversations.currentId, cardId)"
             @next-topic="(topic) => conversations.currentId && messages.continueWithTopic(conversations.currentId, topic)"
@@ -176,19 +187,22 @@ onUnmounted(() => {
       <footer class="composer">
         <button class="resize-handle horizontal" type="button" aria-label="调整输入框高度" @pointerdown="startInputResize" />
         <p v-if="messages.error" class="error-line">{{ messages.error }}</p>
-        <ActionBar
-          v-if="latestCard"
-          :disabled="messages.streaming"
-          @continue="conversations.currentId && messages.continueLearning(conversations.currentId)"
-          @quiz="conversations.currentId && latestCard?.learning_card_id && messages.generateQuiz(conversations.currentId, latestCard.learning_card_id)"
-        />
-        <ChatInput
-          :height="layout.inputHeight"
-          :disabled="messages.loading"
-          :streaming="messages.streaming"
-          @send="send"
-          @stop="messages.stopStreaming"
-        />
+        <div class="composer-row">
+          <ActionBar
+            v-if="latestCard"
+            :disabled="messages.streaming"
+            @continue="conversations.currentId && messages.continueLearning(conversations.currentId)"
+            @quiz="conversations.currentId && latestCard?.learning_card_id && messages.generateQuiz(conversations.currentId, latestCard.learning_card_id)"
+          />
+          <div v-else class="action-bar-placeholder" />
+          <ChatInput
+            :height="layout.inputHeight"
+            :disabled="messages.loading"
+            :streaming="messages.streaming"
+            @send="send"
+            @stop="messages.stopStreaming"
+          />
+        </div>
       </footer>
     </section>
   </main>

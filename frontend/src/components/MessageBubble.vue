@@ -5,7 +5,12 @@ import { computed, ref } from 'vue'
 import type { Message } from '../types'
 import MarkdownRenderer from './MarkdownRenderer.vue'
 
-const props = defineProps<{ message: Message; canEdit: boolean }>()
+const props = defineProps<{
+  message: Message
+  canEdit: boolean
+  canRegenerate: boolean
+  regenerateCardId?: string
+}>()
 const emit = defineEmits<{
   edit: [id: string, value: string]
   regenerate: [cardId: string]
@@ -28,40 +33,40 @@ function saveEdit() {
 </script>
 
 <template>
-  <article class="message" :class="message.role">
-    <div class="message-label">{{ message.role === 'user' ? '你' : 'AI 导师' }}</div>
-
-    <template v-if="editing">
-      <textarea v-model="draft" class="edit-textarea" />
-      <div class="inline-actions">
-        <button type="button" @click="saveEdit">保存</button>
-        <button type="button" @click="editing = false">取消</button>
-      </div>
-    </template>
-    <MarkdownRenderer v-else :source="message.content || '正在生成...'" />
-
-    <button
-      v-if="nextTopic"
-      class="next-topic"
-      type="button"
-      @click="$emit('nextTopic', nextTopic)"
-    >
-      下一个知识点：{{ nextTopic }}
-    </button>
-
-    <div class="message-actions">
+  <div class="message-row" :class="message.role">
+    <div v-if="message.role === 'user' && (canEdit || canRegenerate)" class="message-side-actions">
       <button v-if="canEdit" type="button" @click="editing = true">
         <Pencil :size="14" />
         修改输入
       </button>
       <button
-        v-if="message.can_regenerate_from_here && message.learning_card_id"
+        v-if="canRegenerate && regenerateCardId"
         type="button"
-        @click="$emit('regenerate', message.learning_card_id)"
+        @click="$emit('regenerate', regenerateCardId)"
       >
         <RotateCcw :size="14" />
         重新生成
       </button>
     </div>
-  </article>
+
+    <article class="message" :class="message.role">
+      <template v-if="editing">
+        <textarea v-model="draft" class="edit-textarea" />
+        <div class="inline-actions">
+          <button type="button" @click="saveEdit">保存</button>
+          <button type="button" @click="editing = false">取消</button>
+        </div>
+      </template>
+      <MarkdownRenderer v-else :source="message.content || '正在生成...'" />
+
+      <button
+        v-if="nextTopic"
+        class="next-topic"
+        type="button"
+        @click="$emit('nextTopic', nextTopic)"
+      >
+        下一个知识点：{{ nextTopic }}
+      </button>
+    </article>
+  </div>
 </template>

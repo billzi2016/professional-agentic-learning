@@ -15,6 +15,30 @@ AI 学习卡片系统。项目采用前后端分离架构：Vue 前端提供 Cha
 - Ollama / OpenRouter / OpenAI-compatible / vLLM / SGLang 可切换
 - `cl100k_base` 100k token 上下文预算
 
+## 界面截图
+
+### SQL 学习
+
+![SQL 学习截图 1](images/sql-1.png)
+
+![SQL 学习截图 2](images/sql-2.png)
+
+![SQL 学习截图 3](images/sql-3.png)
+
+![SQL 学习截图 4](images/sql-4.png)
+
+### Python 学习
+
+![Python 学习截图 1](images/python-1.png)
+
+![Python 学习截图 2](images/python-2.png)
+
+![Python 学习截图 3](images/python-3.png)
+
+### Terraform 学习
+
+![Terraform 学习截图 1](images/terraform-1.png)
+
 ## 目录
 
 ```txt

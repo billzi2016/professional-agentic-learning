@@ -11,6 +11,11 @@ export async function createConversation(title = '新对话'): Promise<Conversat
   return data
 }
 
+export async function updateConversationSummary(id: string, summary: string): Promise<Conversation> {
+  const { data } = await apiClient.patch<Conversation>(`/api/conversations/${id}`, { summary })
+  return data
+}
+
 export async function pinConversation(id: string): Promise<Conversation> {
   const { data } = await apiClient.post<Conversation>(`/api/conversations/${id}/pin`)
   return data

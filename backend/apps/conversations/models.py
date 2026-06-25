@@ -6,6 +6,7 @@ from django.db import models
 class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200, blank=True, default="新对话")
+    summary = models.CharField(max_length=240, blank=True, default="")
     is_pinned = models.BooleanField(default=False)
     archived_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

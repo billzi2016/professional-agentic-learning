@@ -7,13 +7,23 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.db.models import Max
 from json_repair import repair_json
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from apps.conversations.models import Conversation, Message
 from apps.learning.context import build_budgeted_context
 from apps.learning.models import LearningCard, Quiz, QuizAttempt
 from apps.learning.prompts import LEARNING_CARD_SYSTEM_PROMPT, QUIZ_SYSTEM_PROMPT
 from apps.providers.services import get_chat_provider
+
+
+def normalize_learning_summary(summary: str, topic: str) -> str:
+    value = "".join(summary.split()).strip("，。,.：:；;")
+    if value.startswith("学习") and "用途" not in value and 2 < len(value) <= 10:
+        return value
+    if value.startswith("学") and "用途" not in value and len(value) > 1:
+        return f"学习{value[1:]}"[:10]
+    topic_value = "".join(topic.split()).strip("，。,.：:；;") or "当前主题"
+    return f"学习{topic_value}"[:10]
 
 
 class LearningCardPayload(BaseModel):
@@ -31,12 +41,21 @@ class LearningCardPayload(BaseModel):
             return "beginner"
         return value
 
+    @model_validator(mode="after")
+    def normalize_summary(self) -> "LearningCardPayload":
+        self.summary = normalize_learning_summary(self.summary, self.topic)
+        return self
+
 
 class QuizPayload(BaseModel):
     question: str = Field(min_length=1)
     options: list[str] = Field(min_length=4, max_length=4)
     correct_option_index: int = Field(ge=0, le=3)
     explanation: str = Field(min_length=1)
+
+
+class InvalidLearningCardError(ValueError):
+    pass
 
 
 @dataclass
@@ -85,17 +104,8 @@ def parse_learning_card(raw_text: str, fallback_topic: str) -> LearningCardPaylo
     try:
         data = json.loads(repair_json(raw_text))
         return LearningCardPayload.model_validate(data)
-    except (ValueError, ValidationError):
-        # 模型偶尔会违反 JSON 约束。第一版不做复杂重试队列，保留原文为 Markdown，
-        # 但仍通过 schema 生成可保存的最小结构，避免接口直接失败。
-        return LearningCardPayload(
-            title=fallback_topic[:80] or "学习卡片",
-            topic=fallback_topic[:120] or "general",
-            level="beginner",
-            markdown=raw_text.strip() or "模型没有返回有效内容。",
-            summary=(raw_text.strip()[:300] or "模型没有返回有效摘要。"),
-            next_topic="继续学习下一个最小概念",
-        )
+    except (ValueError, ValidationError) as exc:
+        raise InvalidLearningCardError("模型没有返回有效学习卡片 JSON") from exc
 
 
 def parse_quiz(raw_text: str) -> QuizPayload:
@@ -128,9 +138,14 @@ def save_learning_card(conversation: Conversation, user_message: Message, raw_te
         order_index=next_index,
     )
     if next_index == 1:
-        # 第一张卡片的标题来自模型结构化输出，比“新对话”或用户原始输入更适合作为侧边栏标题。
+        # 第一张卡片生成后固定侧边栏摘要。后续继续学习不覆盖它，
+        # 避免左侧列表随着每张卡片变化而跳动。
         conversation.title = payload.title
-        conversation.save(update_fields=["title", "updated_at"])
+        if not conversation.summary:
+            conversation.summary = payload.summary
+            conversation.save(update_fields=["title", "summary", "updated_at"])
+        else:
+            conversation.save(update_fields=["title", "updated_at"])
     else:
         conversation.save(update_fields=["updated_at"])
     return card

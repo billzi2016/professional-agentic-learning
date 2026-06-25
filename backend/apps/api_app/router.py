@@ -1,6 +1,7 @@
 import json
 from uuid import UUID
 
+from django.conf import settings
 from django.http import StreamingHttpResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
@@ -37,6 +38,7 @@ from apps.conversations.services import (
 )
 from apps.learning.models import LearningCard, Quiz
 from apps.learning.services import (
+    InvalidLearningCardError,
     answer_quiz,
     build_learning_messages,
     build_quiz_messages,
@@ -58,6 +60,7 @@ def serialize_conversation(conversation: Conversation) -> ConversationOut:
     return ConversationOut(
         id=conversation.id,
         title=conversation.title,
+        summary=conversation.summary,
         is_pinned=conversation.is_pinned,
         created_at=conversation.created_at,
         updated_at=conversation.updated_at,
@@ -167,15 +170,10 @@ def list_conversations(request, include_archived: bool = False, limit: int = 50)
     qs = Conversation.objects.all()
     if not include_archived:
         qs = qs.filter(archived_at__isnull=True)
-    items = []
-    for conversation in qs[: min(limit, 100)]:
-        last_message = conversation.messages.filter(status=Message.Status.ACTIVE).last()
-        items.append(
-            ConversationListItem(
-                **serialize_conversation(conversation).dict(),
-                last_message_preview=(last_message.content[:120] if last_message else ""),
-            )
-        )
+    items = [
+        ConversationListItem(**serialize_conversation(conversation).dict())
+        for conversation in qs[: min(limit, 100)]
+    ]
     return {"items": items, "next_cursor": None}
 
 
@@ -192,8 +190,14 @@ def get_conversation(request, conversation_id: UUID):
 @api.patch("/conversations/{conversation_id}", response=ConversationOut)
 def patch_conversation(request, conversation_id: UUID, payload: ConversationPatch):
     conversation = get_object_or_404(Conversation, id=conversation_id)
-    conversation.title = payload.title
-    conversation.save(update_fields=["title", "updated_at"])
+    update_fields = ["updated_at"]
+    if payload.title is not None:
+        conversation.title = payload.title
+        update_fields.append("title")
+    if payload.summary is not None:
+        conversation.summary = payload.summary
+        update_fields.append("summary")
+    conversation.save(update_fields=update_fields)
     return serialize_conversation(conversation)
 
 
@@ -269,13 +273,27 @@ def learn_stream(request, conversation_id: UUID, payload: LearnStreamIn):
     user_message = get_object_or_404(Message, id=payload.user_message_id, conversation=conversation)
 
     def events():
-        raw_chunks: list[str] = []
         yield sse_event("card_start", {"temporary_id": str(user_message.id)})
         try:
-            for delta in stream_provider_text(build_learning_messages(conversation, user_message, payload.action)):
-                raw_chunks.append(delta)
-                yield sse_event("card_delta", {"delta": delta})
-            card = save_learning_card(conversation, user_message, "".join(raw_chunks))
+            card = None
+            last_error = ""
+            for attempt in range(1, settings.AI_GENERATION_RETRY_ATTEMPTS + 1):
+                raw_chunks: list[str] = []
+                yield sse_event("card_retry", {"attempt": attempt})
+                for delta in stream_provider_text(build_learning_messages(conversation, user_message, payload.action)):
+                    raw_chunks.append(delta)
+                    yield sse_event("card_delta", {"delta": delta})
+                try:
+                    card = save_learning_card(conversation, user_message, "".join(raw_chunks))
+                    break
+                except InvalidLearningCardError as exc:
+                    last_error = str(exc)
+                    yield sse_event("card_invalid", {"attempt": attempt, "message": last_error})
+
+            if card is None:
+                yield sse_event("error", {"code": "invalid_generation", "message": last_error or "模型连续生成失败"})
+                return
+
             # 模型按约束返回 JSON，但用户界面应该展示 JSON 里的 markdown 字段。
             # 流式阶段先显示原始增量，保存成功后用 card_replace 把草稿替换为干净 Markdown。
             yield sse_event("card_replace", {"markdown": card.markdown, "next_topic": card.next_topic})

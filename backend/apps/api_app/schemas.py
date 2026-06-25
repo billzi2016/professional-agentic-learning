@@ -42,19 +42,21 @@ class ConversationCreate(Schema):
 
 
 class ConversationPatch(Schema):
-    title: str
+    title: str | None = None
+    summary: str | None = None
 
 
 class ConversationOut(Schema):
     id: UUID
     title: str
+    summary: str
     is_pinned: bool
     created_at: datetime
     updated_at: datetime
 
 
 class ConversationListItem(ConversationOut):
-    last_message_preview: str = ""
+    pass
 
 
 class ConversationListResponse(Schema):

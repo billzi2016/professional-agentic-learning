@@ -46,10 +46,10 @@ class OpenAICompatibleProvider:
             model=self.config.model,
             messages=messages,
             stream=True,
-            temperature=0.4,
+            temperature=settings.AI_GENERATION_TEMPERATURE,
             # 学习卡片必须“一次学一点”。这里给模型输出加上硬上限，
             # 避免它把完整课程一次性展开。
-            max_tokens=900,
+            max_tokens=settings.AI_GENERATION_MAX_TOKENS,
         )
         for chunk in stream:
             delta = chunk.choices[0].delta.content

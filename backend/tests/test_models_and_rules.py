@@ -2,7 +2,7 @@ import pytest
 
 from apps.conversations.models import Conversation, Message
 from apps.conversations.services import can_edit_message
-from apps.learning.services import save_learning_card
+from apps.learning.services import InvalidLearningCardError, parse_learning_card, save_learning_card
 from apps.learning.models import LearningCard
 
 
@@ -81,5 +81,12 @@ def test_learning_card_json_payload_saves_markdown_only():
     assert card.message.content == card.markdown
     assert '"markdown"' not in card.message.content
     assert conversation.title == "SQL 基础"
+    assert conversation.summary == "学习SQL"
+    assert card.summary == "学习SQL"
     assert card.next_topic == "SELECT 查询"
     assert card.message.metadata["next_topic"] == "SELECT 查询"
+
+
+def test_invalid_learning_card_json_raises_error():
+    with pytest.raises(InvalidLearningCardError):
+        parse_learning_card("", "SQL")

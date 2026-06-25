@@ -6,6 +6,7 @@ import {
   listConversations,
   pinConversation,
   unpinConversation,
+  updateConversationSummary,
 } from '../api/conversations'
 import type { Conversation } from '../types'
 
@@ -55,6 +56,10 @@ export const useConversationStore = defineStore('conversations', {
       if (this.currentId === id) {
         this.currentId = this.items[0]?.id ?? ''
       }
+    },
+    async editSummary(conversation: Conversation, summary: string) {
+      const updated = await updateConversationSummary(conversation.id, summary)
+      this.items = this.items.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
     },
   },
 })
